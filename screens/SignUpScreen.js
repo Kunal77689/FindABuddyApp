@@ -1,32 +1,49 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Button } from "react-native-paper";
-import { db, collection, addDoc } from "../firebase"; // Import Firestore functions
+import { db, collection, addDoc, auth } from "../firebase"; // Import Firestore and Auth functions
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { showMessage } from "react-native-flash-message";
 
 const SignUpScreen = ({ navigation }) => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
 
   const handleSignUp = async () => {
     try {
-      // Add user data to Firestore
-      const docRef = await addDoc(collection(db, "users"), {
+      // Create user with Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Add additional user data to Firestore
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
-        password: password, // Note: For security reasons, passwords should be handled differently (e.g., hashed) and not stored directly.
-        name: name,
+        username: username,
       });
-      Alert.alert("Sign Up Success", "User has been registered successfully!");
-      navigation.navigate("Login"); // Navigate to Login screen after successful sign-up
+
+      showMessage({
+        message: "Sign Up Success",
+        description: "User has been registered successfully!",
+        type: "success",
+      });
+
+      navigation.navigate("Home"); // Navigate to Home screen after successful sign-up
     } catch (e) {
-      Alert.alert("Sign Up Error", e.message);
+      showMessage({
+        message: "Sign Up Error",
+        description: e.message,
+        type: "danger",
+      });
     }
   };
 
@@ -38,10 +55,17 @@ const SignUpScreen = ({ navigation }) => {
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Name"
+          placeholder="First Name"
           placeholderTextColor="#666"
-          value={name}
-          onChangeText={setName}
+          value={firstName}
+          onChangeText={setFirstName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Last Name"
+          placeholderTextColor="#666"
+          value={lastName}
+          onChangeText={setLastName}
         />
         <TextInput
           style={styles.input}
@@ -49,6 +73,13 @@ const SignUpScreen = ({ navigation }) => {
           placeholderTextColor="#666"
           value={email}
           onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          placeholderTextColor="#666"
+          value={username}
+          onChangeText={setUsername}
         />
         <TextInput
           style={styles.input}

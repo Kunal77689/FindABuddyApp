@@ -7,13 +7,53 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Button } from "react-native-paper";
+import { auth, db } from "../firebase"; // Import Firebase auth and Firestore instance
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getDocs, query, where, collection } from "firebase/firestore";
+import { showMessage } from "react-native-flash-message";
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
-    // Add login logic here
+  const handleLogin = async () => {
+    try {
+      // Get user details from Firestore based on username
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error("No user found with the provided username.");
+      }
+
+      let userEmail = "";
+      querySnapshot.forEach((doc) => {
+        userEmail = doc.data().email;
+      });
+
+      // Authenticate user with Firebase Authentication using email and password
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        userEmail,
+        password
+      );
+      const user = userCredential.user;
+
+      showMessage({
+        message: "Login Success",
+        description: "User has been logged in successfully!",
+        type: "success",
+      });
+
+      navigation.navigate("Home"); // Navigate to Home screen after successful login
+    } catch (e) {
+      showMessage({
+        message: "Login Error",
+        description: e.message,
+        type: "danger",
+      });
+    }
   };
 
   return (
@@ -24,10 +64,10 @@ const LoginScreen = ({ navigation }) => {
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="Username"
           placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
+          value={username}
+          onChangeText={setUsername}
         />
         <TextInput
           style={styles.input}
